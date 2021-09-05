@@ -5,7 +5,6 @@ import asyncio
 import importlib
 
 from pyrogram import idle, filters, types, emoji
-from pyrogram import idle
 from bot import app, alive
 from sys import executable
 from datetime import datetime
@@ -28,12 +27,15 @@ from .helper.ext_utils.bot_utils import get_readable_file_size, get_readable_tim
 from .helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper import button_build
 from bot.helper import get_text, check_heroku
-
 from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch, shell, eval, delete, speedtest, count, reboot
+
+now=datetime.now(pytz.timezone('Asia/Kolkata'))
 
 
 def stats(update, context):
+    global main
     currentTime = get_readable_time(time.time() - botStartTime)
+    current = now.strftime('%m/%d %I:%M:%S %p')
     total, used, free = shutil.disk_usage('.')
     total = get_readable_file_size(total)
     used = get_readable_file_size(used)
@@ -43,17 +45,23 @@ def stats(update, context):
     cpuUsage = psutil.cpu_percent(interval=0.5)
     memory = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
-    stats = f'<b>Bot Uptime:</b> <code>{currentTime}</code>\n' \
-            f'<b>Total Disk Space:</b> <code>{total}</code>\n' \
-            f'<b>Used:</b> <code>{used}</code> ' \
-            f'<b>Free:</b> <code>{free}</code>\n\n' \
-            f'<b>Upload:</b> <code>{sent}</code>\n' \
-            f'<b>Download:</b> <code>{recv}</code>\n\n' \
-            f'<b>CPU:</b> <code>{cpuUsage}%</code> ' \
-            f'<b>RAM:</b> <code>{memory}%</code> ' \
-            f'<b>DISK:</b> <code>{disk}%</code>'
-    sendMessage(stats, context.bot, update)
-    
+    stats = f"〣 {CHAT_NAME} 〣\n\n" \
+            f'Rᴜɴɴɪɴɢ Sɪɴᴄᴇ : {currentTime}\n' \
+            f'Sᴛᴀʀᴛᴇᴅ Aᴛ : {current}\n\n' \
+            f'<b>DISK INFO</b>\n' \
+            f'<b><i>Total</i></b>: {total}\n' \
+            f'<b><i>Used</i></b>: {used} ~ ' \
+            f'<b><i>Free</i></b>: {free}\n\n' \
+            f'<b>DATA USAGE</b>\n' \
+            f'<b><i>UL</i></b>: {sent} ~ ' \
+            f'<b><i>DL</i></b>: {recv}\n\n' \
+            f'<b>SERVER STATS</b>\n' \
+            f'<b><i>CPU</i></b>: {cpuUsage}%\n' \
+            f'<b><i>RAM</i></b>: {memory}%\n' \
+            f'<b><i>DISK</i></b>: {disk}%\n'
+    keyboard = [[InlineKeyboardButton("CLOSE", callback_data="stats_close")]]
+    main = sendMarkup(stats, context.bot, update, reply_markup=InlineKeyboardMarkup(keyboard))
+
 
 def call_back_data(update, context):
     global main
@@ -65,8 +73,8 @@ def call_back_data(update, context):
 
 def start(update, context):
     buttons = button_build.ButtonMaker()
-    buttons.buildbutton("Repo", "https://github.com/SlamDevs/slam-mirrorbot")
-    buttons.buildbutton("Channel", "https://t.me/SlamMirrorUpdates")
+    buttons.buildbutton("Repo", "https://github.com/PriiiiyoDevs/priiiiyo-mirrorbot")
+    buttons.buildbutton("Channel", "https://t.me/P_MirrorUpdates")
     reply_markup = InlineKeyboardMarkup(buttons.build_menu(2))
     if CustomFilters.authorized_user(update) or CustomFilters.authorized_chat(update):
         start_string = f'''
@@ -81,24 +89,24 @@ Type /{BotCommands.HelpCommand} to get a list of available commands
     uptime = get_readable_time((time.time() - botStartTime))
     if CustomFilters.authorized_user(update) or CustomFilters.authorized_chat(update):
         if update.message.chat.type == "private" :
-            sendMessage(f"Hey I'm Alive 🙂\nSince: <code>{uptime}</code>", context.bot, update)
+            sendMessage(f"<b>I'm Awake Already!</b>\n<b>Haven't Slept Since:</b> <code>{uptime}</code>", context.bot, update)
         else :
             sendMarkup(start_string, context.bot, update, reply_markup)
     else:
-        sendMessage('Oops! not a Authorized user.', context.bot, update)
-
+        uname = f'<a href="tg://user?id={update.message.from_user.id}">{update.message.from_user.first_name}</a>'
+        sendMessage(f"<b>Hei {uname},</b>\n\n<b>If You Want To Use Me</b>\n\n<b>You Have To Join @PriiiiyoS_Mirror</b>\n\n<b><i>NOTE : All The Uploaded Links Will Be Sent Here In Your Private Chat From Now</i></b>", context.bot, update)
 
 
 def restart(update, context):
-    restart_message = sendMessage(f"Restarting The Bot {BOT_NO}", context.bot, update)
-    LOGGER.info('Restarting The Bot...')
+    restart_message = sendMessage("🔄️ Restarting, Please wait!", context.bot, update)
     # Save restart message object in order to reply to it after restarting
     with open(".restartmsg", "w") as f:
         f.truncate(0)
         f.write(f"{restart_message.chat.id}\n{restart_message.message_id}\n")
     fs_utils.clean_all()
     os.execl(executable, executable, "-m", "bot")
-    
+
+
 @app.on_message(filters.command([BotCommands.RebootCommand]) & filters.user(OWNER_ID))
 @check_heroku
 async def gib_restart(client, message, hap):
@@ -233,22 +241,53 @@ botcmds = [
 
 
 def main():
+    # Heroku restarted
+    GROUP_ID = f'{RESTARTED_GROUP_ID}'
+    kie = datetime.now(pytz.timezone(f'{TIMEZONE}'))
+    jam = kie.strftime('\n📅 Date: %d/%m/%Y\n⏲️ Time: %I:%M%P\n🌏 Country: 🇲🇾')
+    if GROUP_ID is not None and isinstance(GROUP_ID, str):        
+        try:
+            dispatcher.bot.sendMessage(f"{GROUP_ID}", f"♻️ BOT GOT RESTARTED ♻️\n{jam}\n\nPlease Redownload again\n\n#restarted")
+        except Unauthorized:
+            LOGGER.warning(
+                "Bot isnt able to send message to support_chat, go and check!"
+            )
+        except BadRequest as e:
+            LOGGER.warning(e.message)
+
+# Heroku restarted
+    GROUP_ID2 = f'{RESTARTED_GROUP_ID2}'
+    kie = datetime.now(pytz.timezone(f'{TIMEZONE}'))
+    jam = kie.strftime('\n📅 Date: %d/%m/%Y\n⏲️ Time: %I:%M%P\n🌏 Country: 🇲🇾')
+    if GROUP_ID2 is not None and isinstance(GROUP_ID2, str):        
+        try:
+            dispatcher.bot.sendMessage(f"{GROUP_ID2}", f"♻️ BOT GOT RESTARTED ♻️\n{jam}\n\nPlease Redownload again\n\n#restarted")
+        except Unauthorized:
+            LOGGER.warning(
+                "Bot isnt able to send message to support_chat, go and check!"
+            )
+        except BadRequest as e:
+            LOGGER.warning(e.message)            
+            
     fs_utils.start_cleanup()
 
     if IS_VPS:
         asyncio.get_event_loop().run_until_complete(start_server_async(SERVER_PORT))
 
     # Check if the bot is restarting
-    quo_te = Quote.print()
     if os.path.isfile(".restartmsg"):
         with open(".restartmsg") as f:
             chat_id, msg_id = map(int, f)
-        bot.edit_message_text("Restarted successfully!", chat_id, msg_id)
+        bot.edit_message_text("🔄️ Restarted successfully!", chat_id, msg_id)
         os.remove(".restartmsg")
+    bot.set_my_commands(botcmds)
+
     if LOG_GROUP is not None and isinstance(LOG_GROUP, str):
 
         try:
-            dispatcher.bot.sendMessage(f"{LOG_GROUP}", f"♻️ 𝐁𝐎𝐓 𝐆𝐎𝐓 𝐑𝐄𝐒𝐓𝐀𝐑𝐓𝐄𝐃 ♻️\n\n𝙿𝙻𝙴𝙰𝚂𝙴 𝚁𝙴-𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳 𝙰𝙶𝙰𝙸𝙽\n\n𝐐𝐮𝐨𝐭𝐞\n{quo_te}\n\n#Restarted")
+            now=datetime.now(pytz.timezone('Asia/Kolkata'))
+            current = now.strftime('%Y/%m/%d %I:%M:%P')
+            dispatcher.bot.sendMessage(f"{LOG_GROUP}", f"Bot {BOT_NO} Successfully Restarted\n\nTime : {current}")
         except Unauthorized:
             LOGGER.warning(
                 "Bot isnt able to send message to support_chat, go and check!"
@@ -276,7 +315,7 @@ def main():
     dispatcher.add_handler(stats_handler)
     dispatcher.add_handler(log_handler)
     updater.start_polling(drop_pending_updates=IGNORE_PENDING_REQUESTS)
-    LOGGER.info("Bot Started!")
+    LOGGER.info("📶 Bot Started!")
     signal.signal(signal.SIGINT, fs_utils.exit_clean_up)
 
 app.start()
